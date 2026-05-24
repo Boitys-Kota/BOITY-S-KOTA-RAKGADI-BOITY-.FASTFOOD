@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BOITY'S KOTA (RAKGADI BOITY)</title>
+
+<style>
+body { font-family: Arial; background:#f4f4f8; padding:20px; }
+
+.top-right {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  max-width: 260px;
+  font-size: 14px;
+}
+
+.top-right p {
+  margin: 6px 0;
+  line-height: 1.4;
+}
+
+.top-right strong {
+  color: #333;
+}
+
+.delivery-options {
+  margin: 15px 0;
+}
+
+.delivery-options label {
+  display: inline-block;
+  margin-right: 20px;
+  cursor: pointer;
+}
+
+.delivery-options input[type="radio"] {
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+.address-section {
+  display: none;
+}
+
+.address-section.show {
+  display: block;
+}
+
+h1 { text-align:center; }
+
+.store {
+  display:flex;
+  flex-wrap:wrap;
+  gap:15px;
+  justify-content:center;
+}
+
+.product {
+  background:#fff;
+  padding:10px;
+  border-radius:10px;
+  width:180px;
+  text-align:center;
+  box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+.product img {
+  width:100%;
+  height:120px;
+  object-fit:cover;
+  border-radius:8px;
+}
+
+.box {
+  background:#fff;
+  padding:15px;
+  margin:15px auto;
+  max-width:500px;
+  border-radius:10px;
+}
+
+button {
+  padding:8px 12px;
+  margin:5px;
+  background:#007bff;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+button:hover { background:#0056d2; }
+
+input, textarea {
+  width:100%;
+  padding:8px;
+  margin-top:8px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+</style>
+</head>
+
+<body>
+
+
+
+
+<h1>BOITY'S KOTA (RAKGADI BOITY)</h1>
+
+<div class="store" id="products"></div>
+
+<!-- CART -->
+<div class="box">
+<h2>Cart</h2>
+<div id="cart"></div>
+<p><strong>Total: R<span id="total">0</span></strong></p>
+<button onclick="checkout()">Checkout</button>
+</div>
+
+<!-- CHECKOUT -->
+<div class="box" id="checkoutBox" style="display:none;">
+<h2>Checkout</h2>
+
+<input id="name" placeholder="Name">
+<input id="email" placeholder="Email">
+<input id="phone" placeholder="WhatsApp number">
+
+<div class="delivery-options">
+  <label>
+    <input type="radio" name="orderType" value="delivery" checked>
+    Delivery
+  </label>
+  <label>
+    <input type="radio" name="orderType" value="pickup">
+    Pickup at Store
+  </label>
+</div>
+
+<input id="time" placeholder="Preferred delivery time">
+
+<div id="addressSection" class="address-section show">
+  <textarea id="address" placeholder="Delivery address"></textarea>
+</div>
+
+<button onclick="placeOrder()">Place Order</button>
+</div>
+
+<!-- PAYMENT -->
+<div class="box" id="paymentBox" style="display:none;"></div>
+
+<!-- EMAIL FORM -->
+<form id="orderForm" action="https://formsubmit.co/phylipine6@gmail.com" method="POST" style="display:none;">
+<input type="hidden" name="message" id="message">
+<input type="hidden" name="_subject" value="New Order">
+<input type="hidden" name="_captcha" value="false">
+</form>
+
+<script>
+const products = [
+  {name:"Bread, Polony, Chips, Vienna", price:20, img:"20.png"},
+  {name:"Bread, Polony, Chips, Russian", price:25, img:"25.png"},
+  {name:"Bread, Polony, Chips, Russian, Cheese", price:30, img:"30.png"},
+  {name:"Bread, Polony, Chips, Vienna, Cheese", price:35, img:"35.png"},
+  {name:"Bread, Polony, Chips, Vienna, Russian, Cheese, Egg", price:40, img:"40.png"},
+  {name:"Bread, Polony, Chips, Vienna, Russian, Cheese, Egg, Patty", price:45, img:"45.jpg"},
+];
+
+let cart = [];
+
+function loadProducts(){
+  const div = document.getElementById("products");
+
+  products.forEach((p,i)=>{
+    div.innerHTML += `
+      <div class="product">
+        <img src="${p.img}">
+        <h3>${p.name}</h3>
+        <p>R${p.price}</p>
+        <button onclick="add(${i})">Add</button>
+      </div>
+    `;
+  });
+}
+
+function add(i){
+  const item = products[i];
+  const existing = cart.find(p => p.name === item.name);
+
+  if(existing){
+    existing.qty++;
+  } else {
+    cart.push({...item, qty:1});
+  }
+
+  renderCart();
+}
+
+function renderCart(){
+  let html="";
+  let total=0;
+
+  cart.forEach((p,i)=>{
+    total += p.price * p.qty;
+
+    html += `
+      <strong>${p.name}</strong><br>
+      Qty:
+      <button onclick="changeQty(${i},-1)">-</button>
+      ${p.qty}
+      <button onclick="changeQty(${i},1)">+</button>
+
+      <br>
+      Subtotal: R${p.price * p.qty}
+      <button onclick="removeItem(${i})">Remove</button>
+      <hr>
+    `;
+  });
+
+  document.getElementById("cart").innerHTML = html;
+  document.getElementById("total").innerText = total;
+}
+
+function changeQty(i,val){
+  cart[i].qty += val;
+  if(cart[i].qty <= 0) cart.splice(i,1);
+  renderCart();
+}
+
+function removeItem(i){
+  cart.splice(i,1);
+  renderCart();
+}
+
+function checkout(){
+  document.getElementById("checkoutBox").style.display="block";
+  
+  // Add event listeners for radio buttons
+  const radios = document.querySelectorAll('input[name="orderType"]');
+  radios.forEach(radio => {
+    radio.addEventListener('change', toggleAddressSection);
+  });
+}
+
+function toggleAddressSection(){
+  const orderType = document.querySelector('input[name="orderType"]:checked').value;
+  const addressSection = document.getElementById("addressSection");
+  const timeInput = document.getElementById("time");
+  
+  if(orderType === "delivery"){
+    addressSection.classList.add("show");
+    timeInput.placeholder = "Preferred delivery time";
+  } else {
+    addressSection.classList.remove("show");
+    timeInput.placeholder = "Preferred pickup time";
+  }
+}
+
+function placeOrder(){
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+  const phone = document.getElementById("phone").value;
+  const orderType = document.querySelector('input[name="orderType"]:checked').value;
+  
+  if(!name || !email){
+    alert("Fill all fields");
+    return;
+  }
+
+  const time = document.getElementById("time").value;
+  let address = "";
+
+  if(!time){
+    alert("Fill all fields");
+    return;
+  }
+
+  if(orderType === "delivery"){
+    address = document.getElementById("address").value;
+    if(!address){
+      alert("Fill all fields");
+      return;
+    }
+  }
+
+  const orderID = "ORD-"+Date.now();
+  const total = cart.reduce((s,i)=>s + (i.price*i.qty),0);
+
+  const orderText = cart.map(i =>
+    `${i.name} x${i.qty} - R${i.price*i.qty}`
+  ).join("\n");
+
+  // EMAIL TO YOU
+  const orderTypeText = orderType === "delivery" ? `Delivery Time: ${time}\nDelivery Address: ${address}` : `Pickup Time: ${time}`;
+  
+  document.getElementById("message").value =
+`Order ID: ${orderID}
+
+Name: ${name}
+Email: ${email}
+WhatsApp: ${phone}
+Order Type: ${orderType === "delivery" ? "Delivery" : "Pickup"}
+${orderTypeText}
+
+${orderText}
+
+Total: R${total}`;
+
+  document.getElementById("orderForm").submit();
+
+  // WHATSAPP
+  const deliveryInfo = orderType === "delivery" ? `\n${address}\nDelivery time: ${time}` : `\n[Pickup at Store]\nPickup time: ${time}`;
+  const msg = encodeURIComponent(
+`🛒 Order ${orderID}
+${name}${deliveryInfo}
+
+${orderText}
+
+Total: R${total}`
+  );
+
+  window.open(`https://wa.me/27773677533?text=${msg}`);
+
+  // PAYMENT BOX
+  document.getElementById("paymentBox").style.display="block";
+  document.getElementById("paymentBox").innerHTML = `
+    <h3>💳 Payment Instructions</h3>
+    <p><strong>Order ID:</strong> ${orderID}</p>
+    <p>Bank: Capitec</p>
+    <p>Account: </p>
+    <p>Reference: ${orderID}</p>
+
+    <button onclick="sendWhatsApp('${orderID}','${name}','${address}')">
+      📲 Send Order via WhatsApp
+    </button>
+
+    <h3>📤 Proof of Payment</h3>
+    <input type="file">
+  `;
+
+  alert("Order placed!");
+}
+
+function sendWhatsApp(orderID,name,address){
+  const msg = encodeURIComponent(
+`Order ${orderID}
+${name}
+${address}
+
+Please confirm payment.`
+  );
+
+  window.open(`https://wa.me/27773677533?text=${msg}`);
+}
+
+loadProducts();
+</script>
+
+</body>
+</html>
